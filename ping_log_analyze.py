@@ -15,7 +15,7 @@ REGEXP = r'^\d+ \w+ \w+ .*?(\d+\.\d+\.\d+\.\d+)\)?: icmp_seq=(\d+) ttl=\d+ time=
 REGEXP_TIMESTAMP = r'^\[([0-9]+\.[0-9]+)] \d+ \w+ \w+ .*?(\d+\.\d+\.\d+\.\d+)\)?: icmp_seq=(\d+) ttl=\d+ time=([0-9.]+) .+$'
 # LOG_PATTERN_DNS = re.compile(r'^\d+ \w+ \w+ (\d+\.\d+\.\d+\.\d+): icmp_seq=(\d+) ttl=\d+ time=([0-9.]+) .+$')
 # LOG_PATTERN_DNS_TIMESTAMP = re.compile(r'^\[([0-9]+\.[0-9]+)] \d+ \w+ \w+ (\d+\.\d+\.\d+\.\d+): icmp_seq=(\d+) ttl=\d+ time=([0-9.]+) .+$')
-DEFAULT_TRESHOLD = 1    # ms
+DEFAULT_THRESHOLD = 1    # ms
 
 
 class LogItem:
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--threshold', metavar='milliseconds', type=int,
                         help='Value in millisecondss. Values below this value are considered '
                              'as acceptable, values above are meant too high.',
-                        default=DEFAULT_TRESHOLD)
+                        default=DEFAULT_THRESHOLD)
     parser.add_argument('--timestamps', help='Whether there are timestamps in PING log.', action='store_true')
     parser.add_argument('--regexp', metavar='"regular expression"', help='Regexp for locating suitable records in PING log.')
     args = parser.parse_args()
@@ -51,7 +51,7 @@ if __name__ == '__main__':
         pattern = re.compile(args.regexp)
     else:
         pattern = re.compile(REGEXP_TIMESTAMP if timestamp else REGEXP)
-    TIME_THRESHOLD = args.threshold
+    time_threshold = args.threshold
 
     parsed_log = []
     with open(infile_object) as infile:
@@ -67,7 +67,7 @@ if __name__ == '__main__':
         previous_number = parsed_log[0].number - 1
         previous_item = parsed_log[0]
         for log_item in parsed_log:
-            if log_item.time > TIME_THRESHOLD:
+            if log_item.time > time_threshold:
                 records_above_threshold.append(log_item)
                 high_ping_counter += 1
             if log_item.number != previous_number + 1:
@@ -84,20 +84,21 @@ if __name__ == '__main__':
         result.append(f'Median ping: {median(parsed_log_times)}')
         result.append(f'Maximum ping: {max(parsed_log_times)}')
         result.append('')
-        result.append(f'Total times above {TIME_THRESHOLD} ms: {len(records_above_threshold)}')
+        result.append(f'Total times above {time_threshold} ms: {len(records_above_threshold)}')
         if records_above_threshold:
             exceeding_times = [x.time for x in records_above_threshold]
-            result.append(f'Average ping above {TIME_THRESHOLD} ms: {round(sum(exceeding_times) / len(records_above_threshold), 3)}')
-            result.append(f'Median ping above {TIME_THRESHOLD} ms: {median(exceeding_times)}')
+            result.append(f'Percentage of requests above {time_threshold} ms: {len(records_above_threshold) * 100 / len(parsed_log):.2f}')
+            result.append(f'Average ping above {time_threshold} ms: {round(sum(exceeding_times) / len(records_above_threshold), 3)}')
+            result.append(f'Median ping above {time_threshold} ms: {median(exceeding_times)}')
         result.append('')
-        result.append(f'Skipped requests causes count: {len(chunks_with_skips)}')
+        result.append(f'Skipped requests chunks count: {len(chunks_with_skips)}')
         if chunks_with_skips:
-            result.append(f'Average skipped requests count: {round(sum(skip_counts) / len(skip_counts), 3)}')
-            result.append(f'Median skipped requests count: {median(skip_counts)}')
-            result.append(f'Maximum skipped requests count: {max(skip_counts)}')
+            result.append(f'Average skipped requests in one chunk: {round(sum(skip_counts) / len(skip_counts), 3)}')
+            result.append(f'Median skipped requests in one chunk: {median(skip_counts)}')
+            result.append(f'Maximum skipped requests in one chunk: {max(skip_counts)}')
         result.append('')
         if records_above_threshold:
-            result.append(f'\n__Times above {TIME_THRESHOLD} ms:__\n')
+            result.append(f'\n__Times above {time_threshold} ms:__\n')
             result.extend([f'{x.timestamp} from {x.ip}: seq={x.number} time={x.time}' for x in records_above_threshold])
             result.append('')
         if chunks_with_skips:
