@@ -1,6 +1,6 @@
 # PING_log_analyzer
 Simple utility for collecting statistics from results of PING.
-Requires Python 3.6+
+Requires Python 3.11+
 
 ### Usage
 0. (for *NIX): Make ping_log_analyze.py executable.
